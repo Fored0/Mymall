@@ -1,7 +1,12 @@
 <template>
   <div id="details">
-    <detail-nav-bar class="detail-nav-bar" @titleClick="titleClick" />
-    <scroll class="scrolling" ref="scroll" @scroll="toTop" :probe-type="3">
+    <detail-nav-bar class="detail-nav-bar" @titleClick="titleClick" ref="nav" />
+    <scroll
+      class="scrolling"
+      ref="scroll"
+      @scroll="contentScroll"
+      :probe-type="3"
+    >
       <detail-swiper :topImages="topImages" />
       <detail-base-info :goods="goods" />
       <detail-shop-info :shop="shop" />
@@ -10,6 +15,7 @@
       <detail-comment-info :comment-info="commentInfo" ref="comment" />
       <goods-list :goods="recommend" ref="recommend" />
     </scroll>
+    <detail-bottom-bar @addCart="addCart"/>
     <back-top @click.native="backClick" v-show="isShowBack" />
   </div>
 </template>
@@ -22,6 +28,7 @@ import DetailShopInfo from "./childComs/DetailShopInfo.vue";
 import DetailGoodsInfo from "./childComs/DetailGoodsInfo.vue";
 import DetailParamsInfo from "./childComs/DetailParamsInfo.vue";
 import DetailCommentInfo from "./childComs/DetailCommentInfo.vue";
+import DetailBottomBar from "./childComs/DetailBottomBar.vue"
 
 import Scroll from "components/common/scroll/Scroll.vue";
 import BackTop from "components/content/backTop/BackTop.vue";
@@ -45,6 +52,7 @@ export default {
     DetailGoodsInfo,
     DetailParamsInfo,
     DetailCommentInfo,
+    DetailBottomBar,
     BackTop,
     Scroll,
     GoodsList,
@@ -103,25 +111,52 @@ export default {
   methods: {
     imageLoad() {
       this.$refs.scroll.refresh();
-      this.$nextTick(()=>{
-        this.themeTopY = []
-        this.themeTopY.push(0)
-        this.themeTopY.push(this.$refs.params.$el.offsetTop)
-        this.themeTopY.push(this.$refs.comment.$el.offsetTop)
-        this.themeTopY.push(this.$refs.recommend.$el.offsetTop)
-        console.log(this.themeTopY);
-      })
+      this.$nextTick(() => {
+        this.themeTopY = [];
+        this.themeTopY.push(0);
+        this.themeTopY.push(this.$refs.params.$el.offsetTop);
+        this.themeTopY.push(this.$refs.comment.$el.offsetTop);
+        this.themeTopY.push(this.$refs.recommend.$el.offsetTop);
+        // console.log(this.themeTopY);
+      });
     },
     backClick() {
       this.$refs.scroll.scrollTo(0, 0, 200);
     },
-    toTop(position) {
+    contentScroll(position) {
+      // console.log(position);
       this.isShowBack = -position.y > 1000;
+      const positionY = -position.y;
+      let length = this.themeTopY.length;
+      for (let i = 0; i < length; i++) {
+        if (
+          (i < length - 1 &&
+            positionY > this.themeTopY[i] &&
+            positionY < this.themeTopY[i + 1]) ||
+          (i === length - 1 && positionY > this.themeTopY[i])
+        ) {
+          this.$refs.nav.currentIndex = i;
+        }
+      }
     },
     titleClick(index) {
       // console.log(index);
       this.$refs.scroll.scrollTo(0, -this.themeTopY[index], 10);
     },
+    // 添加购物车
+    addCart(){
+      // 获取商品信息
+      // console.log(this.goods);
+      const products = {}
+      products.iid = this.iid
+      products.title = this.goods.title
+      products.desc = this.goods.desc
+      products.price = this.goods.realPrice
+      products.image = this.topImages[0]
+      // console.log(products);
+      // 将商品添加到购物车
+      this.$store.dispatch("addCart",products)
+    }
   },
 };
 </script>
@@ -130,6 +165,8 @@ export default {
 #details {
   position: relative;
   height: 100vh;
+  z-index: 9;
+  background-color: #fff;
 }
 .detail-nav-bar {
   position: relative;
@@ -137,11 +174,5 @@ export default {
 }
 .scrolling {
   height: calc(100% - 93px);
-}
-.fixed {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: 244px;
 }
 </style>
